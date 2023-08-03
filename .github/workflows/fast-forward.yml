@@ -1,0 +1,16 @@
+name: fast-forward
+on:
+  issue_comment:
+    types: [created, edited]
+jobs:
+  fast-forward:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Fast forwarding
+        uses: nwalfield/sq-git-test/fast-forward@main

@@ -1,0 +1,18 @@
+name: 'Check if a Fast Forward Merge is Possible'
+description: 'Check if a pull request can fast forward the target branch.'
+author: 'Sequoia PGP'
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN'
+    default: '${{ github.token }}'
+runs:
+  using: "composite"
+  steps:
+    # github.action_path is set to $REPO/check-fast-forward.
+    - run: |
+        GITHUB_TOKEN=${{ inputs.github_token }} \
+          ${{ github.action_path }}/../src/fast-forward.sh --check
+      shell: bash
+branding:
+  icon: 'arrow-up-right'
+  color: 'purple'
