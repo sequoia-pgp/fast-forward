@@ -224,8 +224,9 @@ LOG=$(mktemp)
             echo "Rebase locally, and then force push to \`$PR_REF\`."
         fi
     elif test "x$1" = "x--merge"
-         # Check that the user is allowed and then fast forward the
-         # target!
+    then
+        # Check that the user is allowed and then fast forward the
+        # target!
 
         # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#check-if-a-user-is-a-repository-collaborator
         COLLABORATORS_URL="$(github_event .repository.collaborators_url)"
