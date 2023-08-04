@@ -1,0 +1,95 @@
+# This file's format:
+#
+# https://docs.github.com/en/actions/creating-actions/metadata-syntax-for-github-actions
+
+name: 'Authenticates a Merge Request'
+description: >
+    Authenticates a merge request by checking that the commits are
+    authorized by the repository's embedded signing policy.
+
+    This action is intended for use with projects that use Sequoia
+    git.  Sequoia git is a framework that can improve a project's
+    supply chain security.  It defines a set of semantics for
+    authorizing commits, and a tool to check that a policy holds.
+    Using Sequoia git allows downstream users to check that a new
+    version of the software is derived from an older version, which
+    can prevent the use of versions that include modifications that
+    were not authorized by the project's maintainers.
+
+    To use Sequoia git, you add a policy file to the root of a git
+    repository (openpgp-policy.toml), and authorize OpenPGP
+    certificates to make different types of changes.  A commit is
+    considered authorized if the commit has a valid signature, and at
+    least one immediate parent's policy allows the signer to make that
+    type of change.  Downstream users check that a new version is
+    authorized by using sq-git to verify that there is a chain of
+    trust from a known-good old version to the version they are
+    interested in.
+
+    See https://gitlab.com/sequoia-pgp/sequoia-git for more details.
+author: 'Sequoia PGP'
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN'
+    default: '${{ github.token }}'
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        # Fetch from the pull request's repository, not the target
+        # repository, which may not include the commits from the pull
+        # request.
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        # But checkout the target, not the pull request.
+        ref: ${{ github.event.pull_request.head.sha }}
+        fetch-depth: 0
+
+    - uses: docker://registry.gitlab.com/sequoia-pgp/sequoia-git:latest
+      with:
+        entrypoint: '/bin/bash'
+        args: |
+          -c "# Be careful with quoting!!!
+          chown -R $(whoami) .
+
+          # We'd like to use $RUNNER_TEMP to persist files between
+          # steps, but it is not mounted in docker containers:
+          # https://github.com/actions/runner/issues/1984
+          #
+          # Instead, we (mis)use the workspace.
+          LOG=$GITHUB_WORKSPACE/._sq-git-log
+          {
+              # Show the policy.  It's in markdown.  Adjust the
+              # headings.
+              echo '## Base Commit Policy'
+              { sq-git policy describe || true; } | sed 's/^#/###/'
+
+              echo '## Verifying Commits'
+              echo
+              # Convert Key IDs and Fingerprints to links.
+              sq-git log --keep-going --trust-root \
+                '${{ github.event.pull_request.base.sha }}' \
+                '${{ github.event.pull_request.head.sha }}' \
+                | sed 's@[[]\([0-9A-F]\{16,40\}\)[]]@[\1](https://keyserver.ubuntu.com/pks/lookup?search=\1\&fingerprint=on\&op=index)@'
+          } | tee -a $GITHUB_STEP_SUMMARY $LOG
+          "
+    # The sq-git image doesn't include curl or jq.  So we post the
+    # comment separately.
+    - run: |
+        LOG=$GITHUB_WORKSPACE/._sq-git-log
+
+        COMMENT=$(mktemp)
+        jq -n --rawfile log $LOG '{ "body": $log }' >$COMMENT
+
+        COMMENTS_URL="${{ github.event.pull_request.comments_url }}"
+        curl --silent --show-error --location \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ inputs.github_token }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            $COMMENTS_URL \
+            -d @$COMMENT
+      shell: bash
+branding:
+  icon: 'arrow-up-right'
+  color: 'green'
