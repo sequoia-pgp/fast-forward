@@ -25,7 +25,7 @@ following contents:
 name: pull-request
 on:
   pull_request:
-    types: [opened, reopened. synchronize]
+    types: [opened, reopened, synchronize]
 jobs:
   check-fast-forward:
     runs-on: ubuntu-latest
