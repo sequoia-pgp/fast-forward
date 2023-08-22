@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checking if fast forwarding is possible
-        uses: sequoia-pgp/authenticate/check-fast-forward@main
+        uses: sequoia-pgp/fast-forward/check-fast-forward@main
 ```
 
 To actually fast-forward a branch, add
