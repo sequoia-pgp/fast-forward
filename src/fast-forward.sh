@@ -228,9 +228,20 @@ LOG=$(mktemp)
         # Check that the user is allowed and then fast forward the
         # target!
 
-        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#check-if-a-user-is-a-repository-collaborator
         COLLABORATORS_URL="$(github_event .repository.collaborators_url)"
-        COLLABORATORS_URL="${COLLABORATORS_URL%\{/collaborator\}}/$(github_event .sender.login)"
+        COLLABORATORS_BASE_URL="${COLLABORATORS_URL%\{/collaborator\}}"
+        COLLABORATORS_URL="${COLLABORATORS_BASE_URL}/$(github_event .sender.login)"
+
+        # Faciliate debugging by showing who the collarborators are.
+        #
+        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#list-repository-collaborators
+        curl --show-error --location \
+             -H "Accept: application/vnd.github+json" \
+             -H "Authorization: Bearer $GITHUB_TOKEN" \
+             -H "X-GitHub-Api-Version: 2022-11-28" \
+             "${COLLABORATORS_BASE_URL}" >>$GITHUB_STEP_SUMMARY 2>&1
+
+        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#check-if-a-user-is-a-repository-collaborator
         if curl --silent --show-error --location \
                 -H "Accept: application/vnd.github+json" \
                 -H "Authorization: Bearer $GITHUB_TOKEN" \
