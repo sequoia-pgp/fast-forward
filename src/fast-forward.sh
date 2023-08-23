@@ -229,36 +229,18 @@ LOG=$(mktemp)
         # target!
 
         COLLABORATORS_URL="$(github_event .repository.collaborators_url)"
-        COLLABORATORS_BASE_URL="${COLLABORATORS_URL%\{/collaborator\}}"
-        COLLABORATORS_URL="${COLLABORATORS_BASE_URL}/$(github_event .sender.login)"
+        COLLABORATORS_URL="${COLLABORATORS_URL%\{/collaborator\}}"
 
-        # Faciliate debugging by showing who the collarborators are.
-        #
-        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#list-repository-collaborators
-        curl --show-error --location \
+        PERM=$(mktemp)
+
+        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#get-repository-permissions-for-a-user
+        curl --show-error -o "$PERM" --location \
              -H "Accept: application/vnd.github+json" \
              -H "Authorization: Bearer $GITHUB_TOKEN" \
              -H "X-GitHub-Api-Version: 2022-11-28" \
-             "${COLLABORATORS_BASE_URL}" >>$GITHUB_STEP_SUMMARY 2>&1
+             $COLLABORATORS_URL/$(github_event .sender.login)/permission
 
-        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#check-if-a-user-is-a-repository-collaborator
-        if curl --silent --show-error --location \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer $GITHUB_TOKEN" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                --head \
-                "$COLLABORATORS_URL" \
-                | awk '
-              /^HTTP/ {
-                if ($2 == "204") {
-                  exit 0;
-                } else {
-                  print "Access denied: "$2;
-                  exit 1;
-                }
-              }
-
-              // { exit 1; }'
+        if test "x$(jq -r .user.permissions.push < $PERM)" = xtrue
         then
             echo '```shell'
             (
@@ -269,7 +251,7 @@ LOG=$(mktemp)
             echo '```'
         else
             echo -n "Sorry @$(github_event .sender.login), only those with"
-            echo " write access to this repository can merge pull requests."
+            echo " push permission can merge pull requests."
         fi
     else
         # We're just checking.
