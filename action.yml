@@ -1,0 +1,33 @@
+name: 'Fast Forward Merge'
+description: 'Merge a pull request by fast forwarding the target branch.'
+author: 'Sequoia PGP'
+inputs:
+  github_token:
+    description: 'GITHUB_TOKEN'
+    default: '${{ github.token }}'
+  merge:
+    description: >
+      Whether to actually merge the pull request or only check whether
+      fast forwarding is possible.
+
+      If true, the action will fast forward the target branch, if
+      possible.  If false, the action will only post a comment
+      indicating whether it is possible to fast forward the target
+      branch.
+    default: false
+runs:
+  using: "composite"
+  steps:
+    # github.action_path is set to $REPO.
+    - run: |
+        export GITHUB_TOKEN=${{ inputs.github_token }}
+        if test "x${{ inputs.merge }}" = xtrue
+        then
+            ${{ github.action_path }}/src/fast-forward.sh --merge
+        else
+            ${{ github.action_path }}/src/fast-forward.sh
+        fi
+      shell: bash
+branding:
+  icon: 'arrow-up-right'
+  color: 'green'

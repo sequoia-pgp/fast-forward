@@ -39,10 +39,11 @@ jobs:
 
     steps:
       - name: Checking if fast forwarding is possible
-        uses: sequoia-pgp/fast-forward/check-fast-forward@main
+        uses: sequoia-pgp/fast-forward@main
 ```
 
-To actually fast-forward a branch, add
+To actually fast-forward a branch when an authorized user adds a
+comment containing `/fast-forward` to the pull request, add
 `.github/workflows/fast-forward.yml` to your repository with the
 following contents:
 
@@ -62,11 +63,10 @@ jobs:
 
     steps:
       - name: Fast forwarding
-        uses: nwalfield/sq-git-test/fast-forward@main
+        uses: sequoia-pgp/fast-forward@main
+        with:
+            merge: true
 ```
 
-Note: `fast-forward` is careful to make sure only collaborators are
-allowed to trigger the merge.
-
-Typing `/fast-forward` will then fast forward the target.
-
+Note: `fast-forward` is careful to check that the user who triggered
+the workflow is authorized to push to the repository.
