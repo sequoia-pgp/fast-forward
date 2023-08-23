@@ -228,13 +228,12 @@ LOG=$(mktemp)
         # Check that the user is allowed and then fast forward the
         # target!
 
+        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#get-repository-permissions-for-a-user
         COLLABORATORS_URL="$(github_event .repository.collaborators_url)"
         COLLABORATORS_URL="${COLLABORATORS_URL%\{/collaborator\}}"
 
         PERM=$(mktemp)
-
-        # https://docs.github.com/en/rest/collaborators/collaborators?apiVersion=2022-11-28#get-repository-permissions-for-a-user
-        curl --show-error -o "$PERM" --location \
+        curl --silent --show-error -o "$PERM" --location \
              -H "Accept: application/vnd.github+json" \
              -H "Authorization: Bearer $GITHUB_TOKEN" \
              -H "X-GitHub-Api-Version: 2022-11-28" \
