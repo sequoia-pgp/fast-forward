@@ -132,7 +132,7 @@ function github_pull_request {
 
 LOG=$(mktemp)
 {
-    echo "Triggered from $(github_event .comment.html_url .pull_request.html_url) by $GITHUB_ACTOR."
+    echo "Triggered from $(github_event .comment.html_url .pull_request.html_url) by @$GITHUB_ACTOR."
     echo
 
     # The symbolic name.
