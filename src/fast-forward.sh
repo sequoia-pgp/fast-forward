@@ -199,20 +199,20 @@ LOG=$(mktemp)
 
     if test "x$1" = "x--merge"
     then
-        echo "Trying to "
+        echo -n "Trying to "
     else
-        echo "Checking if we can "
+        echo -n "Checking if we can "
     fi
-    echo -n " fast forward \`$BASE_REF\` ($BASE_SHA) to \`$PR_REF\` ($PR_SHA)."
+    echo " fast forward \`$BASE_REF\` ($BASE_SHA) to \`$PR_REF\` ($PR_SHA)."
 
     echo
-    echo "Target branch:"
+    echo "Target branch (\`$BASE_REF\`):"
     echo
     echo '```shell'
     git log --decorate=short -n 1 "$BASE_SHA"
     echo '```'
     echo
-    echo "Pull request:"
+    echo "Pull request (\`$PR_REF\`):"
     echo
     echo '```shell'
     git log --decorate=short -n 1 "$PR_SHA"
