@@ -193,7 +193,6 @@ LOG=$(mktemp)
     # Name the remote branch so that it looks pretty.
     git branch -f "pull_request/$PR_REF" "$PR_SHA"
 
-    echo -n "<details><summary>"
     if test "x$1" = "x--merge"
     then
         echo "Trying to "
@@ -201,7 +200,6 @@ LOG=$(mktemp)
         echo "Checking if we can "
     fi
     echo -n " fast forward \`$BASE_REF\` ($BASE_SHA) to \`$PR_REF\` ($PR_SHA)."
-    echo "</summary>"
 
     echo
     echo "Target branch:"
@@ -215,7 +213,6 @@ LOG=$(mktemp)
     echo '```shell'
     git log --decorate=short -n 1 "$PR_SHA"
     echo '```'
-    echo "</details>"
 
     if ! git merge-base --is-ancestor "$BASE_SHA" "$PR_SHA"
     then
@@ -231,9 +228,7 @@ LOG=$(mktemp)
         then
             echo " Branches don't appear to have a common ancestor."
         else
-            echo
-            echo "<details>"
-            echo "<summary>Branches appear to have diverged at $MERGE_BASE.</summary>"
+            echo " Branches appear to have diverged at $MERGE_BASE:"
             echo
             echo '```shell'
             git log --pretty=oneline --graph \
@@ -241,7 +236,6 @@ LOG=$(mktemp)
             echo
             git log --decorate=short -n 1 "$MERGE_BASE"
             echo '```'
-            echo "</details>"
         fi
         echo
         echo "Rebase locally, and then force push to \`$PR_REF\`."
