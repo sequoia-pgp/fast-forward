@@ -35,10 +35,21 @@ inputs:
       may also execute some additional RPCs, and so should normally
       be disabled.
     default: 0
+outputs:
+  comment:
+    description: >
+      The comment.
+
+      A comment explaining whether fast forwarding is possible, and,
+      if `merge` is true, whether it was successful.
+
+      The comment is a JSON document with a single field, `body`.
+    value: ${{ steps.fast-forward.outputs.comment }}
 runs:
   using: "composite"
   steps:
-    - run: |
+    - id: fast-forward
+      run: |
         export GITHUB_TOKEN=${{ inputs.github_token }}
         export DEBUG=${{ inputs.debug }}
         export COMMENT=${{ inputs.comment }}

@@ -108,7 +108,10 @@ the repository.
 ## Disabling Comments
 
 If you prefer to disable comments, you can set the `comment` input
-variable to `false` like so:
+variable to `false`.  The `comment` is also written to the `comment`
+output variable so it is possible to use it in a successive step.  The
+format is a JSON document with a single key, `body`.  Here's an
+example:
 
 ```yaml
 name: pull-request
@@ -128,7 +131,22 @@ jobs:
 
     steps:
       - name: Checking if fast forwarding is possible
+        id: fast-forward
         uses: sequoia-pgp/fast-forward@main
         with:
           comment: false
+      - name: Display comment
+        env:
+          COMMENT: ${{ steps.fast-forward.outputs.comment }}
+        run: echo "The comment is... $COMMENT"
 ```
+
+This would display something like:
+
+```text
+The comment is... {
+  "body": "..."
+}
+```
+
+Additional fields may be added to the JSON document in the future.

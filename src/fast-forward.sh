@@ -305,6 +305,15 @@ LOG=$(mktemp)
 COMMENT_CONTENT=$(mktemp)
 jq -n --rawfile log "$LOG" '{ "body": $log }' >"$COMMENT_CONTENT"
 
+# Set the comment output variable.
+{
+    # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+    echo "comment<<EOF_$COMMENT_CONTENT"
+    cat "$COMMENT_CONTENT"
+    echo "EOF_$COMMENT_CONTENT"
+} | tee -a "$GITHUB_OUTPUT"
+
+# Post the comment.
 if test $COMMENT -gt 0
 then
     COMMENTS_URL="$(github_pull_request .comments_url)"
