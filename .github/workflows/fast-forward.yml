@@ -4,6 +4,8 @@ on:
     types: [created, edited]
 jobs:
   fast-forward:
+    # Only run if the comment contains the /fast-forward command.
+    if: ${{ contains(github.event.comment.body, '/fast-forward') }}
     runs-on: ubuntu-latest
 
     permissions:
