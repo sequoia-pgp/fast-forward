@@ -200,14 +200,17 @@ LOG=$(mktemp)
     else
         echo "Checking if we can "
     fi
-    echo -n " fast forward \`$BASE_REF\` ($BASE_SHA)."
+    echo -n " fast forward \`$BASE_REF\` ($BASE_SHA) to \`$PR_REF\` ($PR_SHA)."
     echo "</summary>"
 
+    echo
+    echo "Target branch:"
+    echo
     echo '```shell'
     git log --decorate=short -n 1 "$BASE_SHA"
     echo '```'
     echo
-    echo "to \`$PR_REF\` ($PR_SHA):"
+    echo "Pull request:"
     echo
     echo '```shell'
     git log --decorate=short -n 1 "$PR_SHA"
