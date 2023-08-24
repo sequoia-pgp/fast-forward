@@ -138,8 +138,10 @@ function github_pull_request {
 # Triggered by issue ${{ github.event.issue.number }}
 
 # Set to 0 if everything is okay.  Set to 1, if fast forwarding is not
-# possible or fails.
-EXIT_CODE=1
+# possible or fails.  This is a file to simplify setting this from a
+# subshell.
+EXIT_CODE=$(mktemp)
+echo 1 >$EXIT_CODE
 
 LOG=$(mktemp)
 {
@@ -268,9 +270,10 @@ LOG=$(mktemp)
             (
                 PS4='$ '
                 set -x
-                git push origin "$PR_SHA:$BASE_REF" && EXIT_CODE=0
+                git push origin "$PR_SHA:$BASE_REF"
             )
             echo '```'
+            echo 0 >$EXIT_CODE
         else
             echo -n "Sorry @$(github_event .sender.login),"
             echo -n " it is possible to fast forward \`$BASE_REF\` ($BASE_SHA)"
@@ -285,7 +288,7 @@ LOG=$(mktemp)
         echo -n " target repository, you can add a comment with"
         echo -n " \`/fast-forward\` to fast forward \`$BASE_REF\` to"
         echo    " \`$PR_REF\`."
-        EXIT_CODE=0
+        echo 0 >$EXIT_CODE
     fi
 } 2>&1 | tee -a $GITHUB_STEP_SUMMARY "$LOG"
 
@@ -307,4 +310,4 @@ else
     echo "Can't post a comment: github.event.pull_request.comments_url is not set." | tee -a $GITHUB_STEP_SUMMARY
 fi
 
-exit $EXIT_CODE
+exit $(cat $EXIT_CODE)
