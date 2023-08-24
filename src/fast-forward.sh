@@ -34,6 +34,16 @@ case "${DEBUG:-0}" in
         ;;
 esac
 
+# Set to true to post a comment to the issue.
+case "${COMMENT:-true}" in
+    0 | false | FALSE) COMMENT=0;;
+    1 | true | TRUE) COMMENT=1;;
+    *)
+        echo "Warning: Invalid value ('$COMMENT') for COMMENT." >&2;
+        COMMENT=1
+        ;;
+esac
+
 if test "x$GITHUB_EVENT_PATH" = x
 then
     echo "GITHUB_EVENT_PATH environment variable must be set." >&2
@@ -292,22 +302,27 @@ LOG=$(mktemp)
     fi
 } 2>&1 | tee -a $GITHUB_STEP_SUMMARY "$LOG"
 
-COMMENT=$(mktemp)
-jq -n --rawfile log "$LOG" '{ "body": $log }' >"$COMMENT"
+COMMENT_CONTENT=$(mktemp)
+jq -n --rawfile log "$LOG" '{ "body": $log }' >"$COMMENT_CONTENT"
 
-COMMENTS_URL="$(github_pull_request .comments_url)"
-if test "x$COMMENTS_URL" != x
+if test $COMMENT -gt 0
 then
-    echo "Posting comment to $COMMENTS_URL."
-    curl --silent --show-error --location \
-         -X POST \
-         -H "Accept: application/vnd.github+json" \
-         -H "Authorization: Bearer $GITHUB_TOKEN" \
-         -H "X-GitHub-Api-Version: 2022-11-28" \
-         "$COMMENTS_URL" \
-         -d "@$COMMENT"
+    COMMENTS_URL="$(github_pull_request .comments_url)"
+    if test "x$COMMENTS_URL" != x
+    then
+        echo "Posting comment to $COMMENTS_URL."
+        curl --silent --show-error --location \
+             -X POST \
+             -H "Accept: application/vnd.github+json" \
+             -H "Authorization: Bearer $GITHUB_TOKEN" \
+             -H "X-GitHub-Api-Version: 2022-11-28" \
+             "$COMMENTS_URL" \
+             -d "@$COMMENT_CONTENT"
+    else
+        echo "Can't post a comment: github.event.pull_request.comments_url is not set." | tee -a $GITHUB_STEP_SUMMARY
+    fi
 else
-    echo "Can't post a comment: github.event.pull_request.comments_url is not set." | tee -a $GITHUB_STEP_SUMMARY
+    echo "Not posting comment, disabled by user."
 fi
 
 exit $(cat $EXIT_CODE)

@@ -104,3 +104,31 @@ This workflow is only run when a comment that includes `/fast-forward`
 is added to the pull request.  The workflow is careful to check that
 the user who triggered the workflow is actually authorized to push to
 the repository.
+
+## Disabling Comments
+
+If you prefer to disable comments, you can set the `comment` input
+variable to `false` like so:
+
+```yaml
+name: pull-request
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+jobs:
+  check-fast-forward:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      # We appear to need write permission for both pull-requests and
+      # issues in order to post a comment to a pull request.
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checking if fast forwarding is possible
+        uses: sequoia-pgp/fast-forward@main
+        with:
+          comment: false
+```
