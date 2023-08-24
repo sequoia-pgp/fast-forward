@@ -193,8 +193,16 @@ LOG=$(mktemp)
     # Name the remote branch so that it looks pretty.
     git branch -f "pull_request/$PR_REF" "$PR_SHA"
 
-    echo "Trying to fast forward \`$BASE_REF\` ($BASE_SHA):"
-    echo
+    echo -n "<details><summary>"
+    if test "x$1" = "x--merge"
+    then
+        echo "Trying to "
+    else
+        echo "Checking if we can "
+    fi
+    echo -n " fast forward \`$BASE_REF\` ($BASE_SHA)."
+    echo "</summary>"
+
     echo '```shell'
     git log --decorate=short -n 1 "$BASE_SHA"
     echo '```'
@@ -204,32 +212,36 @@ LOG=$(mktemp)
     echo '```shell'
     git log --decorate=short -n 1 "$PR_SHA"
     echo '```'
-    echo
+    echo "</details>"
 
     if ! git merge-base --is-ancestor "$BASE_SHA" "$PR_SHA"
     then
         # No luck.  The PR needs to be rebased.
 
-        echo -n "Can't fast forward."
-        echo -n " \`$BASE_REF\` $BASE_SHA"
-        echo -n " is not a direct ancestor of"
-        echo -n " \`$PR_REF\` $PR_SHA."
+        echo -n "Can't fast forward \`$BASE_REF\` ($BASE_SHA) to"
+        echo -n " \`$PR_REF\` ($PR_SHA)."
+        echo -n " \`$BASE_REF\` ($BASE_SHA) is not a direct ancestor of"
+        echo -n " \`$PR_REF\` ($PR_SHA)."
 
         MERGE_BASE=$(git merge-base "$BASE_SHA" "$PR_SHA" || true)
         if test x"$MERGE_BASE" = x
         then
             echo " Branches don't appear to have a common ancestor."
         else
-            echo " Branches appear to have diverged at $MERGE_BASE:"
+            echo
+            echo "<details>"
+            echo "<summary>Branches appear to have diverged at $MERGE_BASE.</summary>"
             echo
             echo '```shell'
             git log --pretty=oneline --graph \
                 "^$MERGE_BASE^" "$BASE_SHA" "$PR_SHA"
+            echo
             git log --decorate=short -n 1 "$MERGE_BASE"
             echo '```'
-            echo
-            echo "Rebase locally, and then force push to \`$PR_REF\`."
+            echo "</details>"
         fi
+        echo
+        echo "Rebase locally, and then force push to \`$PR_REF\`."
     elif test "x$1" = "x--merge"
     then
         # Check that the user is allowed and then fast forward the
@@ -248,6 +260,9 @@ LOG=$(mktemp)
 
         if test "x$(jq -r .user.permissions.push < $PERM)" = xtrue
         then
+            echo -n "Fast forwarding \`$BASE_REF\` ($BASE_SHA) to"
+            echo " \`$PR_REF\` ($PR_SHA)."
+
             echo '```shell'
             (
                 PS4='$ '
@@ -256,16 +271,19 @@ LOG=$(mktemp)
             )
             echo '```'
         else
-            echo -n "Sorry @$(github_event .sender.login), only those with"
-            echo " push permission can merge pull requests."
+            echo -n "Sorry @$(github_event .sender.login),"
+            echo -n " it is possible to fast forward \`$BASE_REF\` ($BASE_SHA)"
+            echo -n " to \`$PR_REF\` ($PR_SHA), but you don't appear to have"
+            echo    " permission to push to this repository."
         fi
     else
-        # We're just checking.
+        # We're just checking if fast forwarding is possible.
 
-        echo -n "If you have write access to the target repository,"
-        echo -n " you can add a comment with \`/fast-forward\` to"
-        echo -n " fast forward"
-        echo " \`$BASE_REF\` to \`$PR_REF\`."
+        echo -n "It is possible to fast forward \`$BASE_REF\` ($BASE_SHA)"
+        echo -n " to \`$PR_REF\` ($PR_SHA).  If you have write access to the"
+        echo -n " target repository, you can add a comment with"
+        echo -n " \`/fast-forward\` to fast forward \`$BASE_REF\` to"
+        echo    " \`$PR_REF\`."
     fi
 } 2>&1 | tee -a $GITHUB_STEP_SUMMARY "$LOG"
 
