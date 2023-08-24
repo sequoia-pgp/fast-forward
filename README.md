@@ -1,23 +1,51 @@
-This repository contains several GitHub actions that can help users of
-your repository authenticate signed commits.
+# Fast Forward Pull Requests
 
-Unfortunately using signed commits with GitHub requires a bit of work
-due to how GitHub merges commits: even when a pull request could be
-merged by fast forwarding the target branch, GitHub rewrites the
-commits (specifically, it updates the committer field, and resigns the
-commits).  Since the commits are modified, the original signatures are
-invalidated, and stripped.
-
-It is possible to push changes from a pull request directly to the
-target branch after any checks have passed.  But, this is
-inconvenient.  The `check-fast-forward` and `fast-forward` actions
-make it possible to do this directly from a comment on the pull
+This repository contains a GitHub action that merges a pull request by
+fast forwarding the target branch.  The action is triggered when an
+authorized user adds a comment containing `/fast-forward` to the pull
 request.
 
-`check-fast-forward` checks if a pull request can be merged whenever a
-pull request is opened or updated, and adds a comment on the pull
-request indicating if this is the case, or if the pull request needs
-to be rebased.  It can be enabled as follows by adding
+As the following screenshot shows, GitHub's web UX allows the user to
+select from several different merge strategies:
+
+![Screenshot of GitHub's Merge pull request options: "Create a merge
+  commit", "Squash and merge", and "Rebase and
+  merge"](assets/merge-pull-request.jpg)
+
+Unfortunately, none of the strategies fast forward the target branch
+even when fast forwarding is possible.  In particular, the `Rebase and
+merge` strategy unconditionally rewrites the commits by changing each
+commit's `committer` field.  This causes the commits to have a
+different hash, and destroys any signatures.
+
+With a bit of work, it is possible to prevent GitHub from modifying
+the commits.  Specifically, it is possible to push changes from a pull
+request directly to the target branch after any checks have passed.
+Consider:
+
+```shell
+$ # We can't directly push to main, because it is protected.
+$ git push origin
+...
+remote: error: GH006: Protected branch update failed for refs/heads/main.
+...
+$ # We can create a PR, wait for the CI checks to pass, then push directly to main.
+$ git push origin HEAD:workwork
+$ git push origin
+```
+
+This approach isn't very convenient.
+
+The `fast-forward` action improves the situation a bit by making it
+possible to fast forward directly from the web UX by posting a comment
+on the pull request.
+
+## Checking if Fast Forwarding is Possible
+
+By default `fast-forward` checks if a pull request can be merged.  It
+adds a comment on the pull request indicating if this is the case, or
+if the pull request needs to be rebased.  To run this check whenever a
+pull request is opened or updated, add
 `.github/workflows/pull_request.yml` to your repository with the
 following contents:
 
@@ -42,8 +70,9 @@ jobs:
         uses: sequoia-pgp/fast-forward@main
 ```
 
-To actually fast-forward a branch when an authorized user adds a
-comment containing `/fast-forward` to the pull request, add
+## Fast Forwarding a Pull Request
+
+To actually fast-forward a branch, add
 `.github/workflows/fast-forward.yml` to your repository with the
 following contents:
 
@@ -70,5 +99,7 @@ jobs:
             merge: true
 ```
 
-Note: `fast-forward` is careful to check that the user who triggered
-the workflow is authorized to push to the repository.
+This workflow is only run when a comment that includes `/fast-forward`
+is added to the pull request.  The workflow is careful to check that
+the user who triggered the workflow is actually authorized to push to
+the repository.
