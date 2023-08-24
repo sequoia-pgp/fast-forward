@@ -25,7 +25,14 @@
 set -e
 
 # Set to 1 to get some debugging information dumped to stderr.
-DEBUG=0
+case "${DEBUG:-0}" in
+    0 | false | FALSE) DEBUG=0;;
+    [0-9] | true | TRUE) DEBUG=1;;
+    *)
+        echo "Warning: Invalid value ('$DEBUG') for DEBUG." >&2;
+        DEBUG=1
+        ;;
+esac
 
 if test "x$GITHUB_EVENT_PATH" = x
 then

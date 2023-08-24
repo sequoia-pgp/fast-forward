@@ -15,12 +15,21 @@ inputs:
       indicating whether it is possible to fast forward the target
       branch.
     default: false
+  debug:
+    description: >
+      Enables debugging output.
+
+      If set to 1 or true, increases the workflow's verbosity.  This
+      may also execute some additional RPCs, and so should normally
+      be disabled.
+    default: 0
 runs:
   using: "composite"
   steps:
     # github.action_path is set to $REPO.
     - run: |
         export GITHUB_TOKEN=${{ inputs.github_token }}
+        export DEBUG=${{ inputs.debug }}
         if test "x${{ inputs.merge }}" = xtrue
         then
             ${{ github.action_path }}/src/fast-forward.sh --merge
