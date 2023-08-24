@@ -137,6 +137,10 @@ function github_pull_request {
 # Repository is ${{ github.repository }}
 # Triggered by issue ${{ github.event.issue.number }}
 
+# Set to 0 if everything is okay.  Set to 1, if fast forwarding is not
+# possible or fails.
+EXIT_CODE=1
+
 LOG=$(mktemp)
 {
     echo "Triggered from $(github_event .comment.html_url .pull_request.html_url) by @$GITHUB_ACTOR."
@@ -264,7 +268,7 @@ LOG=$(mktemp)
             (
                 PS4='$ '
                 set -x
-                git push origin "$PR_SHA:$BASE_REF"
+                git push origin "$PR_SHA:$BASE_REF" && EXIT_CODE=0
             )
             echo '```'
         else
@@ -281,6 +285,7 @@ LOG=$(mktemp)
         echo -n " target repository, you can add a comment with"
         echo -n " \`/fast-forward\` to fast forward \`$BASE_REF\` to"
         echo    " \`$PR_REF\`."
+        EXIT_CODE=0
     fi
 } 2>&1 | tee -a $GITHUB_STEP_SUMMARY "$LOG"
 
@@ -301,3 +306,5 @@ then
 else
     echo "Can't post a comment: github.event.pull_request.comments_url is not set." | tee -a $GITHUB_STEP_SUMMARY
 fi
+
+exit $EXIT_CODE
