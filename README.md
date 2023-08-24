@@ -84,7 +84,8 @@ on:
 jobs:
   fast-forward:
     # Only run if the comment contains the /fast-forward command.
-    if: ${{ contains(github.event.comment.body, '/fast-forward') }}
+    if: ${{ contains(github.event.comment.body, '/fast-forward')
+            && github.event.issue.pull_request }}
     runs-on: ubuntu-latest
 
     permissions:
