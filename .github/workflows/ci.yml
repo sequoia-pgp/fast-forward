@@ -1,0 +1,54 @@
+# This action is run from the sequoia-pgp/fast-forward repository and
+# modifies a different repository, sequoia-pgp/fast-forward-unit-test.
+# We can create a fine-grained acess token that allows just modifying
+# that repository by going to:
+#
+#   https://github.com/settings/personal-access-tokens/new
+#
+# And entering:
+#
+#   - Name: fast-forward-unit-tests
+#   - Expiration: Far in the future
+#   - Resource owner: sequoia-pgp
+#   - Only select repositories - sequoia-pgp/fast-forward-unit-tests
+#   - Permissions - select read and write permission for contents, issues,
+#     and pull requests.
+#
+# Add the secret to the fast-forward repository by going to:
+#
+#   https://github.com/sequoia-pgp/fast-forward/settings/secrets/actions
+#
+# or:
+#
+#   Repository, Secrets and variables, Actions, New repository secret
+#
+# And enter:
+#
+#   - Name: FAST_FORWARD_UNIT_TESTS_TOKEN
+#   - Secret: The token
+#
+# Note: the name is meaningful and is used by the
+# tests/fast-forward.sh script.
+
+name: ci
+on:
+  push:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  compile:
+    name: Fast forward
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Check that /fast-forward fast forwards.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAST_FORWARD_UNIT_TESTS_TOKEN: ${{ secrets.FAST_FORWARD_UNIT_TESTS_TOKEN }}
+        run: tests/fast-forward.sh
