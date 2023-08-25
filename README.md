@@ -47,7 +47,7 @@ adds a comment on the pull request indicating if this is the case, or
 if the pull request needs to be rebased.  To run this check whenever a
 pull request is opened or updated, add
 `.github/workflows/pull_request.yml` to your repository with the
-following contents:
+[following contents](.github/workflows/pull_request.yml):
 
 ```yaml
 name: pull-request
@@ -74,7 +74,7 @@ jobs:
 
 To actually fast-forward a branch, add
 `.github/workflows/fast-forward.yml` to your repository with the
-following contents:
+[following contents](.github/workflows/fast-forward.yml):
 
 ```yaml
 name: fast-forward
