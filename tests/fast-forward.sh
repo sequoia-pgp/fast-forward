@@ -317,6 +317,9 @@ echo "::endgroup::"
 
 echo "::group::Check that the PR is closed"
 
+# It can take a second or two for the merge state to be updated.
+sleep 2
+
 MERGED_PR_RESULT=$(maketemp)
 curl --silent --show-error --output $MERGED_PR_RESULT -L \
   -H "Accept: application/vnd.github+json" \
