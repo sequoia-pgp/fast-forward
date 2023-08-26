@@ -89,7 +89,7 @@ git remote add origin "https://$GITHUB_ACTOR@github.com/$OWNER/$REPO.git"
 
 echo "::endgroup::"
 
-echo "::group::Add commit #1"
+echo "::group::Add first batch of commits"
 
 # Add the workflow files.
 for f in $FILES
@@ -101,17 +101,24 @@ done
 
 git commit -m 'Initial commit' --no-gpg-sign
 
+echo foo >> foo
+git add foo
+git commit -m 'Adding foo' --no-gpg-sign
+
 BASE=fast-forward-test-0$RANDOM
 git push origin main:$BASE
+
+# Reset to the first commit so that the PR can't be fast forwarded.
+git reset --hard HEAD^
 
 echo "::endgroup::"
 
 # Create a new commit, push it to a different branch.
-echo "::group::Add commit #2"
+echo "::group::Add second batch of commits"
 
-echo $RANDOM > hello
-git add hello
-git commit -m 'Hello' --no-gpg-sign
+echo $RANDOM > bar
+git add bar
+git commit -m 'Adding bar' --no-gpg-sign
 
 PR=$BASE-pr
 git push origin main:$PR
@@ -156,45 +163,109 @@ echo "::endgroup::"
 
 echo "Pull request: https://github.com/$OWNER/$REPO/pull/$PR_NUMBER"
 
-# Wait for the check-fast-forward job to finish and check the results.
-echo "::group::Check that the check-fast-forward action ran, and said yes"
+# Returns the body of the nth comment (zero-based index).  To return
+# the second comment, do:
+#
+#  wait_for_comment 1
+#
+# If the comment is not present, this polls for a while.
+function wait_for_comment {
+    N=$1
+    case "$N" in
+        [0-9]) :;;
+        *)
+            echo "Invalid comment number: $N" >&2
+            exit 1
+            ;;
+    esac
 
-COMMENTS_RESULT=$(maketemp)
-echo "Waiting for job to finish..."
-for i in $(seq 20 -1 0)
-do
-    if test $i -eq 0
-    then
-        echo "Timeout waiting for check-fast-forward job"
-        cat "$COMMENTS_RESULT"
-        exit 1
-    fi
-    sleep 3
-
-    curl --silent --show-error --output "$COMMENTS_RESULT" -L \
-         -H "Accept: application/vnd.github+json" \
-         -H "Authorization: Bearer $TOKEN" \
-         -H "X-GitHub-Api-Version: 2022-11-28" \
-         https://api.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/comments
-
-    COMMENT=$(jq -r .[0].body <"$COMMENTS_RESULT")
-    if test "x$COMMENT" = xnull
-    then
-        # The job hasn't completed yet.
-        continue
-    else
-        if echo $COMMENT | grep -q 'you can add a comment with `/fast-forward` to fast forward'
+    COMMENTS_RESULT=$(maketemp)
+    echo "Waiting for comment #$N..." >&2
+    for i in $(seq 20 -1 0)
+    do
+        if test $i -eq 0
         then
-            echo check-fast-forward worked.
-        else
-            echo "Unexpected comment in response to push, did check-fast-forward change?"
-            cat $COMMENTS_RESULT
+            echo "Timeout waiting for comment" >&2
+            cat "$COMMENTS_RESULT" >&2
             exit 1
         fi
-    fi
+        sleep 3
 
-    break
-done
+        curl --silent --show-error --output "$COMMENTS_RESULT" -L \
+             -H "Accept: application/vnd.github+json" \
+             -H "Authorization: Bearer $TOKEN" \
+             -H "X-GitHub-Api-Version: 2022-11-28" \
+             https://api.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/comments
+
+        COMMENT=$(jq -r .[$N].body <"$COMMENTS_RESULT")
+        if test "x$COMMENT" = xnull
+        then
+            # The job hasn't completed yet.
+            continue
+        else
+            echo "$COMMENT"
+            break
+        fi
+    done
+}
+
+echo "::group::Check that the check-fast-forward action ran, and said no"
+
+COMMENT=$(wait_for_comment 0)
+if echo "$COMMENT" | grep -q 'is not a direct ancestor of'
+then
+    echo check-fast-forward worked.
+else
+    echo "Unexpected comment in response to push, did check-fast-forward change?"
+    echo "Comment:"
+    echo "$COMMENT"
+    exit 1
+fi
+
+echo "::endgroup::"
+
+echo "::group::Post a /fast-forward comment to try to fast forward the pull request"
+
+curl --silent --show-error -L \
+     -X POST \
+     -H "Accept: application/vnd.github+json" \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "X-GitHub-Api-Version: 2022-11-28" \
+     https://api.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/comments \
+     -d '{ "body":"/fast-forward this..." }'
+
+COMMENT=$(wait_for_comment 2)
+if echo "$COMMENT" | grep -q 'is not a direct ancestor of'
+then
+    echo check-fast-forward worked.
+else
+    echo "Unexpected comment in response to /fast-forward, did fast-forward change?"
+    echo "Comment:"
+    echo "$COMMENT"
+    exit 1
+fi
+
+echo "::endgroup::"
+
+echo "::group::Rebase PR so that fast forwarding is possible"
+
+git rebase "origin/$BASE" --no-gpg-sign
+git push --force origin main:$PR
+
+echo "::endgroup::"
+
+echo "::group::Check that the check-fast-forward action ran, and said yes"
+
+COMMENT=$(wait_for_comment 3)
+if echo "$COMMENT" | grep -q 'you can add a comment with `/fast-forward` to fast forward'
+then
+    echo check-fast-forward worked.
+else
+    echo "Unexpected comment in response to push, did check-fast-forward change?"
+    echo "Comment:"
+    echo "$COMMENT"
+    exit 1
+fi
 
 echo "::endgroup::"
 
@@ -208,48 +279,20 @@ curl --silent --show-error -L \
      https://api.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/comments \
      -d '{ "body":"We should /fast-forward this..." }'
 
-# Wait for the fast-forward job to finish and then check the results.
-echo "Waiting for job to finish..."
-for i in $(seq 20 -1 0)
-do
-    if test $i -eq 0
-    then
-        echo "Timeout waiting for fast-forward job"
-        cat "$COMMENTS_RESULT"
-        exit 1
-    fi
-    sleep 3
-
-    curl --silent --show-error --output "$COMMENTS_RESULT" -L \
-         -H "Accept: application/vnd.github+json" \
-         -H "Authorization: Bearer $TOKEN" \
-         -H "X-GitHub-Api-Version: 2022-11-28" \
-         https://api.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER/comments
-
-    # Comment 0 is from check-fast-forward, 1 is our /fast-forward,
-    # and 2 will be from fast-forward.
-    COMMENT=$(jq -r .[2].body <"$COMMENTS_RESULT")
-    if test "x$COMMENT" = xnull
-    then
-        # The job hasn't completed yet.
-        continue
-    else
-        if echo $COMMENT | grep -q 'Fast forwarding `'"$BASE"'`'
-        then
-            echo fast-forward worked.
-        else
-            echo "Unexpected comment in response to /fast-forward, did fast-forward change?"
-            cat "$COMMENTS_RESULT"
-            exit 1
-        fi
-    fi
-
-    break
-done
+COMMENT=$(wait_for_comment 5)
+if echo "$COMMENT" | grep -q 'Fast forwarding `'"$BASE"'`'
+then
+    echo check-fast-forward worked.
+else
+    echo "Unexpected comment in response to /fast-forward, did fast-forward change?"
+    echo "Comment:"
+    echo "$COMMENT"
+    exit 1
+fi
 
 echo "::endgroup::"
 
-# Make sure the base was fast forwarded by checking that it's sha is
+# Make sure the base was fast forwarded by checking that its sha is
 # now identical to HEAD.
 echo "::group::Check that the remote branch was fast forwarded"
 
@@ -272,8 +315,6 @@ echo "Pull request was fast forwarded!"
 
 echo "::endgroup::"
 
-# Make sure the base was fast forwarded by checking that it's sha is
-# now identical to HEAD.
 echo "::group::Check that the PR is closed"
 
 MERGED_PR_RESULT=$(maketemp)
@@ -282,12 +323,12 @@ curl --silent --show-error --output $MERGED_PR_RESULT -L \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/$OWNER/$REPO/issues/$PR_NUMBER
-cat $MERGED_PR_RESULT
 
 STATE=$(jq -r .state <"$MERGED_PR_RESULT")
 if test "x$STATE" != xclosed
 then
     echo "PR was not closed (state: '$STATE')"
+    cat $MERGED_PR_RESULT
     exit 1
 fi
 
