@@ -5,18 +5,27 @@ fast forwarding the target branch.  The action is triggered when an
 authorized user adds a comment containing `/fast-forward` to the pull
 request.
 
-As the following screenshot shows, GitHub's web UX allows the user to
-select from several different merge strategies:
+The ability to fast forward a branch (the equivalent of doing `git
+merge --ff-only`) is needed to have an *unmodified*, linear history.
+More perspectives on the usefulness of fast forwarding are presented
+in [this GitHub
+discussion](https://github.com/orgs/community/discussions/4618).
+
+Unfortunately, it is not currently possible to fast forward a branch
+using GitHub's web UX.  GitHub's web UX allows the user to select from
+several different merge strategies, but none of the strategies fast
+forward the target branch even when fast forwarding is possible.
 
 ![Screenshot of GitHub's Merge pull request options: "Create a merge
   commit", "Squash and merge", and "Rebase and
   merge"](assets/merge-pull-request.jpg)
 
-Unfortunately, none of the strategies fast forward the target branch
-even when fast forwarding is possible.  In particular, the `Rebase and
-merge` strategy unconditionally rewrites the commits by changing each
-commit's `committer` field.  This causes the commits to have a
-different hash, and destroys any signatures.
+The closest sounding merge strategy is `Rebase and merge`.  But, it
+[unconditionally rewrites the commits by changing each commit's
+`committer`
+field](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github#rebasing-and-merging-your-commits).
+That is, it does the equivalent of `git rebase --no-ff`.  This results
+in the commits having a different hash, and destroys any signatures.
 
 With a bit of work, it is possible to prevent GitHub from modifying
 the commits.  Specifically, it is possible to push changes from a pull
@@ -34,18 +43,25 @@ $ git push origin HEAD:workwork
 $ git push origin
 ```
 
-This approach isn't very convenient.
+But, this approach isn't very convenient.
 
 The `fast-forward` action improves the situation a bit by making it
 possible to fast forward directly from the web UX by posting a comment
 on the pull request.
 
+See the GitHub Marketplace for [other actions that do something
+similar](https://github.com/marketplace?type=actions&query=fast+forward).
+
 ## Checking if Fast Forwarding is Possible
 
-By default `fast-forward` checks if a pull request can be merged.  It
-adds a comment on the pull request indicating if this is the case, or
-if the pull request needs to be rebased.  To run this check whenever a
-pull request is opened or updated, add
+By default the `fast-forward` action checks if a pull request can be
+merged.  It adds a comment to the pull request indicating if this is
+the case, or if the pull request needs to be rebased.  When the target
+branch can't be fast forwarded, the action fails.  If the target
+branch is protected, this prevents the branch from being merged, which
+is normally desired.
+
+To run this check whenever a pull request is opened or updated, add
 `.github/workflows/pull_request.yml` to your repository with the
 [following contents](.github/workflows/pull_request.yml):
 
