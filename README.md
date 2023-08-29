@@ -5,6 +5,8 @@ fast forwarding the target branch.  The action is triggered when an
 authorized user adds a comment containing `/fast-forward` to the pull
 request.
 
+[![Screenshot of a video demonstrating the action](assets/demo-youtube-screenshot.jpg)](https://www.youtube.com/watch?v=AXUtUdH6zrw)
+
 The ability to fast forward a branch (the equivalent of doing `git
 merge --ff-only`) is needed to have an *unmodified*, linear history.
 More perspectives on the usefulness of fast forwarding are presented
