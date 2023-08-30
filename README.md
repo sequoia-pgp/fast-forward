@@ -86,6 +86,13 @@ jobs:
     steps:
       - name: Checking if fast forwarding is possible
         uses: sequoia-pgp/fast-forward@main
+        with:
+          merge: false
+          # To reduce the workflow's verbosity, use 'on-error'
+          # to only post a comment when an error occurs, or 'never' to
+          # never post a comment.  (In all cases the information is
+          # still available in the step's summary.)
+          comment: always
 ```
 
 ## Fast Forwarding a Pull Request
@@ -115,7 +122,12 @@ jobs:
       - name: Fast forwarding
         uses: sequoia-pgp/fast-forward@main
         with:
-            merge: true
+          merge: true
+          # To reduce the workflow's verbosity, use 'on-error'
+          # to only post a comment when an error occurs, or 'never' to
+          # never post a comment.  (In all cases the information is
+          # still available in the step's summary.)
+          comment: always
 ```
 
 This workflow is only run when a comment that includes `/fast-forward`

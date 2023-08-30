@@ -19,4 +19,9 @@ jobs:
         uses: sequoia-pgp/fast-forward@main
         with:
           merge: true
+          # To reduce the workflow's verbosity, use 'on-error'
+          # to only post a comment when an error occurs, or 'never' to
+          # never post a comment.  (In all cases the information is
+          # still available in the step's summary.)
+          comment: always
 

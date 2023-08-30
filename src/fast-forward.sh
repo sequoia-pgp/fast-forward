@@ -36,11 +36,12 @@ esac
 
 # Set to true to post a comment to the issue.
 case "${COMMENT:-true}" in
-    0 | false | FALSE) COMMENT=0;;
-    1 | true | TRUE) COMMENT=1;;
+    0 | never | false | FALSE) COMMENT=never;;
+    1 | always | true | TRUE) COMMENT=always;;
+    on-error) COMMENT=on-error
     *)
         echo "Warning: Invalid value ('$COMMENT') for COMMENT." >&2;
-        COMMENT=1
+        COMMENT=on-error
         ;;
 esac
 
@@ -313,9 +314,10 @@ jq -n --rawfile log "$LOG" '{ "body": $log }' >"$COMMENT_CONTENT"
     echo "EOF_$COMMENT_CONTENT"
 } | tee -a "$GITHUB_OUTPUT"
 
-# Post the comment.
-if test $COMMENT -gt 0
+if test "x$COMMENT" = xalways \
+        -o \( "x$COMMENT" = xon-error -a "$(cat $EXIT_CODE)" -ne 0 \)
 then
+    # Post the comment.
     COMMENTS_URL="$(github_pull_request .comments_url)"
     if test "x$COMMENTS_URL" != x
     then
@@ -331,7 +333,7 @@ then
         echo "Can't post a comment: github.event.pull_request.comments_url is not set." | tee -a $GITHUB_STEP_SUMMARY
     fi
 else
-    echo "Not posting comment, disabled by user."
+    echo "Not posting comment."
 fi
 
 exit $(cat $EXIT_CODE)
