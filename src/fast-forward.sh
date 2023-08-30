@@ -38,7 +38,7 @@ esac
 case "${COMMENT:-true}" in
     0 | never | false | FALSE) COMMENT=never;;
     1 | always | true | TRUE) COMMENT=always;;
-    on-error) COMMENT=on-error
+    on-error) COMMENT=on-error;;
     *)
         echo "Warning: Invalid value ('$COMMENT') for COMMENT." >&2;
         COMMENT=on-error
