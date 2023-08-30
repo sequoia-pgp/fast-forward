@@ -15,9 +15,20 @@ REPO=${REPO:-fast-forward-unit-tests}
 #   - Developer Settings
 #   - Personal access tokens
 #   - Tokens (classic)
-#   - Generate a personal access token
+#   - Generate new token
+#   - Generate new token (fine-grained, repo-scoped)
 #
-# Create a token with "repo" permission.
+#   - Token name: fast-forward
+#   - Resource owner: sequoia-pgp
+#   - Only select repositories
+#   - sequoia-pgp/fast-forward-unit-tests
+#   - Permissions: Actions, Commit statuses, Contents, Issues, Pull requests, Workflows
+#   - Generate token
+#
+# Then you can locally run:
+#
+#   $ OWNER=sequoia-pgp REPO=fast-forward-unit-tests GITHUB_ACTOR=nwalfield \
+#     GITHUB_TOKEN=github_pat_... tests/fast-forward.sh
 if test "x$GITHUB_TOKEN" = x -a "x$FAST_FORWARD_UNIT_TESTS_TOKEN" = x
 then
     echo "Either the GITHUB_TOKEN or the FAST_FORWARD_UNIT_TESTS_TOKEN environment variable needs to be set."
