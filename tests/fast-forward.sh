@@ -47,6 +47,12 @@ then
     exit 1
 fi
 
+# Print the environment (for debugging purposes).
+echo "::group::env"
+env
+echo "::endgroup::"
+
+
 TEMPFILES=$(mktemp)
 echo -n "$TEMPFILES" >> "$TEMPFILES"
 function maketemp {
@@ -121,17 +127,20 @@ then
         exit 1
     fi
 fi
+echo "GITHUB_REPOSITORY: $GITHUB_REPOSITORY"
 
 if test "x$GITHUB_HEAD_REF" = x
 then
-    echo "GITHUB_REPOSITORY unset.  Using HEAD."
+    echo "GITHUB_HEAD_REF unset.  Using HEAD."
     GITHUB_HEAD_REF=$(git rev-parse HEAD)
 fi
+echo "GITHUB_HEAD_REF: $GITHUB_HEAD_REF"
 
 # Check that the branch has been pushed to origin.
 if test -z "$(git branch -r --list 'origin/*' --contains $GITHUB_HEAD_REF)"
 then
-    echo "The commit we want to test, $GITHUB_HEAD_REF, does not appear to have been pushed to origin."
+    echo "The commit we want to test ($GITHUB_HEAD_REF) does not appear to have been pushed to origin."
+    git branch -r | while read b; do git log --format=oneline -n 1 "$b"; done
     exit 1
 fi
 
