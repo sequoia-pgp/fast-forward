@@ -79,6 +79,13 @@ do
     fi
 done
 
+if ! test -z "$(git status --untracked-files=no --porcelain)"
+then
+    echo "You appear to have uncommitted changes.  You have to push your changes to actually test them."
+    git status --untracked-files=no
+    exit 1
+fi
+
 # The workflows need to point to the code that we actually want to
 # test.  That is is probably not the released version of the actions,
 # and it not necessarily the repository where we'll do the tests
@@ -119,6 +126,13 @@ if test "x$GITHUB_HEAD_REF" = x
 then
     echo "GITHUB_REPOSITORY unset.  Using HEAD."
     GITHUB_HEAD_REF=$(git rev-parse HEAD)
+fi
+
+# Check that the branch has been pushed to origin.
+if test -z "$(git branch -r --list 'origin/*' --contains $GITHUB_HEAD_REF)"
+then
+    echo "The commit we want to test, $GITHUB_HEAD_REF, does not appear to have been pushed to origin."
+    exit 1
 fi
 
 echo "::group::Initializing scratch repository"
