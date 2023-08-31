@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Fast forwarding
-        uses: sequoia-pgp/fast-forward@main
+        uses: sequoia-pgp/fast-forward@v1
         with:
           merge: true
           # To reduce the workflow's verbosity, use 'on-error'

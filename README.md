@@ -85,7 +85,7 @@ jobs:
 
     steps:
       - name: Checking if fast forwarding is possible
-        uses: sequoia-pgp/fast-forward@main
+        uses: sequoia-pgp/fast-forward@v1
         with:
           merge: false
           # To reduce the workflow's verbosity, use 'on-error'
@@ -120,7 +120,7 @@ jobs:
 
     steps:
       - name: Fast forwarding
-        uses: sequoia-pgp/fast-forward@main
+        uses: sequoia-pgp/fast-forward@v1
         with:
           merge: true
           # To reduce the workflow's verbosity, use 'on-error'
@@ -162,7 +162,7 @@ jobs:
     steps:
       - name: Checking if fast forwarding is possible
         id: fast-forward
-        uses: sequoia-pgp/fast-forward@main
+        uses: sequoia-pgp/fast-forward@v1
         with:
           comment: false
       - name: Display comment
