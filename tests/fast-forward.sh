@@ -79,6 +79,48 @@ do
     fi
 done
 
+# The workflows need to point to the code that we actually want to
+# test.  That is is probably not the released version of the actions,
+# and it not necessarily the repository where we'll do the tests
+# (i.e., create the pull request).  The current checkout *is* the code
+# we want to test.  So we need to make sure the actions installed in
+# the unit test repository reference those actions.
+#
+# GITHUB_REPOSITORY (OWNER/REPO) and GITHUB_HEAD_REF (a commit hash)
+# refer to the commit we are testing.  If they are not set, then we
+# are running locally.
+#
+# GITHUB_REPOSITORY is of the form OWNER/REPO.  It is the repository
+# that contains the code that we are testing (as opposed to the test
+# repository where we'll make a pull request, etc.).
+if test "x$GITHUB_REPOSITORY" = x
+then
+    echo "GITHUB_REPOSITORY unset.  Inferring from origin."
+    ORIGIN=$(git remote get-url origin)
+    # We expect one of:
+    #
+    #  - https://username@github.com/sequoia-pgp/fast-forward.git
+    #  - git@github.com:sequoia-pgp/fast-forward.git
+    #
+    # We split on github.com
+    GITHUB_REPOSITORY=$(echo "$ORIGIN" \
+                            | awk -F"github[.]com[:/]" '{
+                                  sub(/[.]git/, "");
+                                  print $2;
+                              }')
+    if test "x$GITHUB_REPOSITORY" = x
+    then
+        echo "Unable to extract OWNER/REPO from origin ($ORIGIN)"
+        exit 1
+    fi
+fi
+
+if test "x$GITHUB_HEAD_REF" = x
+then
+    echo "GITHUB_REPOSITORY unset.  Using HEAD."
+    GITHUB_HEAD_REF=$(git rev-parse HEAD)
+fi
+
 echo "::group::Initializing scratch repository"
 
 D=$(maketemp -d)
@@ -98,6 +140,22 @@ git config credential.helper store
 
 git remote add origin "https://$GITHUB_ACTOR@github.com/$OWNER/$REPO.git"
 
+# Make sure our BASE is the default branch so that the workflows we
+# want to test will run.
+REPO_PROPERTIES=$(maketemp)
+curl --silent --show-error --output $REPO_PROPERTIES -L \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "X-GitHub-Api-Version: 2022-11-28" \
+  https://api.github.com/repos/$OWNER/$REPO
+DEFAULT_BRANCH=$(jq -r ".default_branch" < $REPO_PROPERTIES)
+if test x$DEFAULT_BRANCH = x
+then
+    echo "Couldn't figure out the test repository's default branch."
+    cat $REPO_PROPERTIES
+    exit 1
+fi
+
 echo "::endgroup::"
 
 echo "::group::Add first batch of commits"
@@ -106,9 +164,27 @@ echo "::group::Add first batch of commits"
 for f in $FILES
 do
     mkdir -p $(dirname $f)
-    cp "$FAST_FORWARD_REPO/$f" "$f"
+    # By default the workflows uses the actions in
+    # sequoia-pgp/fastforward.  But, we don't want to test those.  We
+    # want to test the workflows in the current commit.
+    sed 's#^\( *uses: \)sequoia-pgp/fast-forward@.*$#\1 '"$GITHUB_REPOSITORY@$GITHUB_HEAD_REF#" <"$FAST_FORWARD_REPO/$f" > "$f"
     git add "$f"
 done
+
+cat > README.md <<EOF
+\`\`\`text
+# Commit that we are testing
+GITHUB_REPOSITORY=$GITHUB_REPOSITORY
+GITHUB_HEAD_REF=$GITHUB_HEAD_REF
+# Unit test repository:
+OWNER=$OWNER
+REPO=$REPO
+DEFAULT_BRANCH=$DEFAULT_BRANCH
+
+GITHUB_ACTOR=$GITHUB_ACTOR
+\`\`\`
+EOF
+git add README.md
 
 git commit -m 'Initial commit' --no-gpg-sign
 
@@ -116,8 +192,11 @@ echo foo >> foo
 git add foo
 git commit -m 'Adding foo' --no-gpg-sign
 
-BASE=fast-forward-test-0$RANDOM
-git push origin main:$BASE
+# We have to push to the default branch otherwise the issue_comment
+# workflow that we're testing won't run, but the one installed on the
+# default branch.  We assume here that the default branch is main.
+BASE=$DEFAULT_BRANCH
+git push --force origin main:$BASE
 
 # Reset to the first commit so that the PR can't be fast forwarded.
 git reset --hard HEAD^
@@ -131,7 +210,7 @@ echo $RANDOM > bar
 git add bar
 git commit -m 'Adding bar' --no-gpg-sign
 
-PR=$BASE-pr
+PR=fast-forward-test-0$RANDOM-pr
 git push origin main:$PR
 
 echo "::endgroup::"
@@ -259,6 +338,10 @@ fi
 echo "::endgroup::"
 
 echo "::group::Rebase PR so that fast forwarding is possible"
+
+echo "Test pull request is https://github.com/$OWNER/$REPO/pull/$PR_NUMBER" >> README.md
+git add README.md
+git commit -m 'Updating README' --no-gpg-sign
 
 git rebase "origin/$BASE" --no-gpg-sign
 git push --force origin main:$PR
