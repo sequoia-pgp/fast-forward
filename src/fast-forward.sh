@@ -156,7 +156,7 @@ echo 1 >$EXIT_CODE
 
 LOG=$(mktemp)
 {
-    echo "Triggered from $(github_event .comment.html_url .pull_request.html_url) by @[$GITHUB_ACTOR]($(github_event .user.html_url))."
+    echo "Triggered from $(github_event .comment.html_url .pull_request.html_url) by [@&ZeroWidthSpace;$GITHUB_ACTOR](https://github.com/$GITHUB_ACTOR)."
     echo
 
     # The symbolic name.
