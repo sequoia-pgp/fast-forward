@@ -248,8 +248,20 @@ LOG=$(mktemp)
             echo " Branches appear to have diverged at $MERGE_BASE:"
             echo
             echo '```shell'
+
+            # We don't want to displays the commits before the merge
+            # base.  We need to be careful though: if the merge base
+            # is a root (i.e., it has no parents), then $MERGE_BASE^
+            # is not a valid reference.
+            if test x$(git cat-file -t "$MERGE_BASE^") = xcommit
+            then
+                EXCLUDE="^$MERGE_BASE^"
+            else
+                EXCLUDE=
+            fi
+
             git log --pretty=oneline --graph \
-                "^$MERGE_BASE^" "$BASE_SHA" "$PR_SHA"
+                $EXCLUDE "$BASE_SHA" "$PR_SHA"
             echo
             git log --decorate=short -n 1 "$MERGE_BASE"
             echo '```'
