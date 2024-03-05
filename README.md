@@ -95,6 +95,9 @@ jobs:
           comment: always
 ```
 
+Note: this will only work after the fast-forward action has been
+merged into the default branch.
+
 ## Fast Forwarding a Pull Request
 
 To actually fast-forward a branch, add
@@ -134,6 +137,9 @@ This workflow is only run when a comment that includes `/fast-forward`
 is added to the pull request.  The workflow is careful to check that
 the user who triggered the workflow is actually authorized to push to
 the repository.
+
+Note: this will only work after the fast-forward action has been
+merged into the default branch.
 
 ## Disabling Comments
 
