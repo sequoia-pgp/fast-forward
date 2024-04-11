@@ -180,8 +180,10 @@ LOG=$(mktemp)
         } | git credential approve
 
         CLONE_URL="${CLONE_URL%://*}://${GITHUB_ACTOR}@${CLONE_URL#*://}"
-        git clone --quiet --single-branch --filter=blob:none --branch "$BASE_REF" "$CLONE_URL" .
 
+        git clone --quiet --filter=blob:none --no-checkout "$CLONE_URL" .
+        git sparse-checkout set README.md
+        git checkout "$BASE_REF"
         BASE_SHA="$(git rev-parse origin/$BASE_REF 2>/dev/null)"
     fi
 
