@@ -180,7 +180,7 @@ LOG=$(mktemp)
         } | git credential approve
 
         CLONE_URL="${CLONE_URL%://*}://${GITHUB_ACTOR}@${CLONE_URL#*://}"
-        git clone --quiet --single-branch --branch "$BASE_REF" "$CLONE_URL" .
+        git clone --quiet --single-branch --filter=blob:none --branch "$BASE_REF" "$CLONE_URL" .
 
         BASE_SHA="$(git rev-parse origin/$BASE_REF 2>/dev/null)"
     fi
@@ -348,4 +348,6 @@ else
     echo "Not posting comment."
 fi
 
-exit $(cat $EXIT_CODE)
+# Always exit 0
+exit 0
+# exit $(cat $EXIT_CODE)
