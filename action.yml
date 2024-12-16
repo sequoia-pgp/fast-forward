@@ -15,6 +15,14 @@ inputs:
       indicating whether it is possible to fast forward the target
       branch.
     default: false
+  merge-method:
+    description: >
+      When merging, whether fast forwarding the branch or creating a
+      merge commit.
+
+      If merge-commit, a merge commit is created. Otherwise (the default),
+      the branch is fast forwarded.
+    default: fast-forward
   comment:
     description: >
       Whether to post a comment.
@@ -61,7 +69,13 @@ runs:
         # github.action_path is set to $REPO.
         if test "x${{ inputs.merge }}" = xtrue
         then
-            ${{ github.action_path }}/src/fast-forward.sh --merge
+            if test "x${{ inputs.merge-method }}" = xmerge-commit
+            then
+                MERGE_METHOD=merge-commit
+            else
+                MERGE_METHOD=fast-forward
+            fi
+            ${{ github.action_path }}/src/fast-forward.sh --merge "${MERGE_METHOD}"
         else
             ${{ github.action_path }}/src/fast-forward.sh
         fi
