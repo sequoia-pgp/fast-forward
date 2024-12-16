@@ -286,17 +286,58 @@ LOG=$(mktemp)
 
         if test "x$(jq -r .user.permissions.push < $PERM)" = xtrue
         then
-            echo -n "Fast forwarding \`$BASE_REF\` ($BASE_SHA) to"
-            echo " \`$PR_REF\` ($PR_SHA)."
+            if test "x$2" = "xmerge-commit"
+            then
+                # Retrieve the user's details (comment sender username and email)
+                # required for merge-commit metadata.
+                USER_NAME="$(github_event .sender.login)"
+                # Email pattern vampirised from the checkout action
+                # (https://github.com/actions/checkout/blob/main/README.md):
+                #   {user.id}+{user.login}@users.noreply.github.com
+                USER_EMAIL="$(github_event .sender.id)+${USER_NAME}@users.noreply.github.com"
 
-            echo '```shell'
-            (
-                PS4='$ '
-                set -x
-                git push origin "$PR_SHA:$BASE_REF"
-            )
-            echo '```'
-            echo 0 >$EXIT_CODE
+                echo "Merging \`$PR_REF\` ($PR_SHA) into \`$BASE_REF\` ($BASE_SHA)."
+
+                if test "$(git rev-parse HEAD)" != "${BASE_SHA}"
+                then
+                    git checkout "${BASE_REF}"
+                fi
+                MESSAGE=$(mktemp)
+                echo "Merge #$(github_pull_request .number): $(github_pull_request .title)" >$MESSAGE
+                echo >>$MESSAGE
+                echo "    $(github_pull_request .html_url)" >>$MESSAGE
+                echo >>$MESSAGE
+                echo "    from ${PR_REF} into ${BASE_REF}" >>$MESSAGE
+                echo >>$MESSAGE
+                echo "$(github_pull_request .body)" >>$MESSAGE
+
+                echo '```shell'
+                (
+                    PS4='$ '
+                    set -x
+                    git \
+                        -c user.name="${USER_NAME}" \
+                        -c user.email="${USER_EMAIL}" \
+                        merge --no-ff --into-name "${BASE_REF}" --file "${MESSAGE}" "${PR_SHA}"
+                    git push origin "${BASE_REF}"
+                )
+                echo '```'
+                rm $MESSAGE
+                echo 0 >$EXIT_CODE
+
+            else
+                echo -n "Fast forwarding \`$BASE_REF\` ($BASE_SHA) to"
+                echo " \`$PR_REF\` ($PR_SHA)."
+
+                echo '```shell'
+                (
+                    PS4='$ '
+                    set -x
+                    git push origin "$PR_SHA:$BASE_REF"
+                )
+                echo '```'
+                echo 0 >$EXIT_CODE
+            fi
         else
             echo -n "Sorry @$(github_event .sender.login),"
             echo -n " it is possible to fast forward \`$BASE_REF\` ($BASE_SHA)"
