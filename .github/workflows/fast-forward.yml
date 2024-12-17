@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Fast forwarding
-        uses: sequoia-pgp/fast-forward@v1
+        uses: smartin-vossloh/fast-forward@9bacd3aa8db95ad80a71ed02f1f2409d245f0b78
         with:
           merge: true
           merge-method: merge-commit
@@ -28,4 +28,3 @@ jobs:
           # never post a comment.  (In all cases the information is
           # still available in the step's summary.)
           comment: always
-
