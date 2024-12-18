@@ -20,6 +20,9 @@ jobs:
         with:
           merge: true
           merge-method: merge-commit
+          merge-author: triggerer
+          merge-user-name: 'fast-forward[bot]'
+          merge-user-email: 'fast-forward[bot]@users.noreply.github.com'
           # To reduce the workflow's verbosity, use 'on-error'
           # to only post a comment when an error occurs, or 'never' to
           # never post a comment.  (In all cases the information is
