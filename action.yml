@@ -23,6 +23,33 @@ inputs:
       If merge-commit, a merge commit is created. Otherwise (the default),
       the branch is fast forwarded.
     default: fast-forward
+  merge-author:
+    description: >
+      The user to use for the merge commit in case of `merge-commit`.
+
+      If set to triggerer, the user who triggered the action is used.
+      If set to pr-author, the user who opened the pull request is used.
+      If set to fixed, the user specified by `merge-user-name` and
+      `merge-user-email` is used.
+      If set to none (default), no user is set.
+
+      This option is only required if `merge` is true and `merge-method`
+      is merge-commit.
+    default: none
+  merge-user-name:
+    description: >
+      The user to use for the merge commit.
+
+      If set, this user is used for the merge commit.  Otherwise, the
+      user who triggered the action is used.
+    default: ''
+  merge-user-email:
+    description: >
+      The user'email to use for the merge commit.
+
+      If set, this user is used for the merge commit.  Otherwise, the
+      user who triggered the action is used.
+    default: ''
   comment:
     description: >
       Whether to post a comment.
@@ -69,12 +96,38 @@ runs:
         # github.action_path is set to $REPO.
         if test "x${{ inputs.merge }}" = xtrue
         then
+            # Define the user information for the merge commit.
+            case "${{ inputs.merge-author }}" in
+            triggerer)
+                USER_NAME="${{ github.event.comment.user.login }}"
+                USER_EMAIL="${{ github.event.comment.user.id }}+fast-forward-bot-triggered-by-${{ github.event.comment.user.login }}@users.noreply.github.com"
+                ;;
+            pr-author)
+                USER_NAME="${{ github.event.pull_request.user.login }}"
+                USER_EMAIL="${{ github.event.pull_request.user.id }}+fast-forward-bot-on-behalf-of-${{ github.event.pull_request.user.login }}@users.noreply.github.com"
+                ;;
+            fixed)
+                USER_NAME="${{ inputs.merge-user-name }}"
+                USER_EMAIL="${{ inputs.merge-user-email }}"
+                ;;
+            *)  ;;
+            esac
+            # Set the user for the merge commit.
+            case "${{ inputs.merge-author }}" in
+            triggerer|pr-author|fixed)
+                git config --global user.name "${USER_NAME}"
+                git config --global user.email "${USER_EMAIL}"
+                ;;
+            *)  ;;
+            esac
+
             if test "x${{ inputs.merge-method }}" = xmerge-commit
             then
                 MERGE_METHOD=merge-commit
             else
                 MERGE_METHOD=fast-forward
             fi
+
             ${{ github.action_path }}/src/fast-forward.sh --merge "${MERGE_METHOD}"
         else
             ${{ github.action_path }}/src/fast-forward.sh
