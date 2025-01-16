@@ -135,6 +135,52 @@ is added to the pull request.  The workflow is careful to check that
 the user who triggered the workflow is actually authorized to push to
 the repository.
 
+## Semi-linear History
+
+To keep a [semi-linear history
+](https://devblogs.microsoft.com/devops/pull-requests-with-rebase/#semi-linear-merge)
+on your repository, i.e. merging a fast-forward branch with a merge
+commit, add `.github/workflows/fast-forward.yml` to your repository
+with the [following contents](.github/workflows/fast-forward.yml):
+
+```yaml
+name: fast-forward
+on:
+  issue_comment:
+    types: [created, edited]
+jobs:
+  fast-forward:
+    # Only run if the comment contains the /fast-forward command.
+    if: ${{ contains(github.event.comment.body, '/fast-forward')
+            && github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Fast forwarding
+        uses: sequoia-pgp/fast-forward@v1
+        with:
+          merge: true
+          merge-method: merge-commit
+          # To reduce the workflow's verbosity, use 'on-error'
+          # to only post a comment when an error occurs, or 'never' to
+          # never post a comment. (In all cases the information is
+          # still available in the step's summary.)
+          comment: always
+```
+
+This workflow is only run when a comment that includes `/fast-forward`
+is added to the pull request. The workflow is careful to :
+* check that the user who triggered the workflow is actually authorized to
+  push to the repository;
+* check that the branch is still fast-forward compared to the target branch
+  right before doing the merge;
+* generate a merge commit log including the PR's details.
+
 ## Disabling Comments
 
 If you prefer to disable comments, you can set the `comment` input
