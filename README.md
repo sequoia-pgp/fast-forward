@@ -135,6 +135,15 @@ is added to the pull request.  The workflow is careful to check that
 the user who triggered the workflow is actually authorized to push to
 the repository.
 
+> **Note**
+>
+> The keyword used to trigger the action from a comment on the PR is
+> `/fast-forward` by default, but it can be set to whatever you want in your
+> workflow.
+>
+> To do so, just change the quoted string in the `if` condition of the
+> `fast-forward` job in the workflow file.
+
 ## Semi-linear History
 
 To keep a [semi-linear history
