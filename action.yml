@@ -23,6 +23,13 @@ inputs:
       If merge-commit, a merge commit is created. Otherwise (the default),
       the branch is fast forwarded.
     default: fast-forward
+  merge-commit-content:
+    description: >
+      When merging using the merge-commit method, set the merge commit
+      message content.
+
+      Possible values are: default, pr-title or pr-title-and-body.
+    default: default
   comment:
     description: >
       Whether to post a comment.
@@ -65,6 +72,7 @@ runs:
         export GITHUB_TOKEN=${{ inputs.github_token }}
         export DEBUG=${{ inputs.debug }}
         export COMMENT=${{ inputs.comment }}
+        export MERGE_COMMIT_CONTENT=${{ inputs.merge-commit-content }}
 
         # github.action_path is set to $REPO.
         if test "x${{ inputs.merge }}" = xtrue

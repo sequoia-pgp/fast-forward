@@ -302,15 +302,41 @@ LOG=$(mktemp)
                 then
                     git checkout "${BASE_REF}"
                 fi
-                MESSAGE=$(mktemp)
-                echo "Merge #$(github_pull_request .number): $(github_pull_request .title)" >$MESSAGE
-                echo >>$MESSAGE
-                echo "    $(github_pull_request .html_url)" >>$MESSAGE
-                echo >>$MESSAGE
-                echo "    from ${PR_REF} into ${BASE_REF}" >>$MESSAGE
-                echo >>$MESSAGE
-                echo "$(github_pull_request .body)" >>$MESSAGE
 
+                MESSAGE=$(mktemp)
+                PR_NUMBER="$(github_pull_request .number)"
+                PR_HTML_URL="$(github_pull_request .html_url)"
+                # debug stuff
+                cat $GITHUB_EVENT
+                {
+                    case "${MERGE_COMMIT_CONTENT}"  in
+                        pr-title-and-body)
+                            # Message contains PR's title and PR's description
+                            # (similar to GitHub's option "PR title and description" +
+                            # the PR's references)
+                            echo "Merge #${PR_NUMBER}: $(github_pull_request .title)"
+                            echo ""
+                            echo "* ${PR_HTML_URL}"
+                            echo "* from ${PR_REF} into ${BASE_REF}"
+                            echo ""
+                            github_pull_request .body
+                            ;;
+                        pr-title)
+                            # Message only contains PR's title
+                            # (similar to GitHub's option "PR title" + the PR's references)
+                            echo "$(github_pull_request .title) (#${PR_NUMBER})"
+                            echo ""
+                            echo "* ${PR_HTML_URL}"
+                            echo "* from ${PR_REF} into ${BASE_REF}"
+                            ;;
+                        *)
+                            # Default merge commit message (similar to GitHub's default)
+                            echo "Merge pull request #$(github_pull_request .number) from ${PR_REF}"
+                            echo ""
+                            github_pull_request .title
+                            ;;
+                    esac
+                } > "${MESSAGE}"
                 echo '```shell'
                 (
                     PS4='$ '
