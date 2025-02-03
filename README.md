@@ -1,7 +1,7 @@
 # Fast Forward Pull Requests
 
 This repository contains a GitHub action that merges a pull request by
-fast forwarding the target branch.  The action is triggered when an
+fast forwarding the target branch. The action is triggered when an
 authorized user adds a comment containing `/fast-forward` to the pull
 request.
 
@@ -14,23 +14,23 @@ in [this GitHub
 discussion](https://github.com/orgs/community/discussions/4618).
 
 Unfortunately, it is not currently possible to fast forward a branch
-using GitHub's web UX.  GitHub's web UX allows the user to select from
+using GitHub's web UX. GitHub's web UX allows the user to select from
 several different merge strategies, but none of the strategies fast
 forward the target branch even when fast forwarding is possible.
 
 ![Screenshot of GitHub's Merge pull request options: "Create a merge
-  commit", "Squash and merge", and "Rebase and
-  merge"](assets/merge-pull-request.jpg)
+commit", "Squash and merge", and "Rebase and
+merge"](assets/merge-pull-request.jpg)
 
-The closest sounding merge strategy is `Rebase and merge`.  But, it
+The closest sounding merge strategy is `Rebase and merge`. But, it
 [unconditionally rewrites the commits by changing each commit's
 `committer`
 field](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/about-merge-methods-on-github#rebasing-and-merging-your-commits).
-That is, it does the equivalent of `git rebase --no-ff`.  This results
+That is, it does the equivalent of `git rebase --no-ff`. This results
 in the commits having a different hash, and destroys any signatures.
 
 With a bit of work, it is possible to prevent GitHub from modifying
-the commits.  Specifically, it is possible to push changes from a pull
+the commits. Specifically, it is possible to push changes from a pull
 request directly to the target branch after any checks have passed.
 Consider:
 
@@ -57,9 +57,9 @@ similar](https://github.com/marketplace?type=actions&query=fast+forward).
 ## Checking if Fast Forwarding is Possible
 
 By default the `fast-forward` action checks if a pull request can be
-merged.  It adds a comment to the pull request indicating if this is
-the case, or if the pull request needs to be rebased.  When the target
-branch can't be fast forwarded, the action fails.  If the target
+merged. It adds a comment to the pull request indicating if this is
+the case, or if the pull request needs to be rebased. When the target
+branch can't be fast forwarded, the action fails. If the target
 branch is protected, this prevents the branch from being merged, which
 is normally desired.
 
@@ -90,7 +90,7 @@ jobs:
           merge: false
           # To reduce the workflow's verbosity, use 'on-error'
           # to only post a comment when an error occurs, or 'never' to
-          # never post a comment.  (In all cases the information is
+          # never post a comment. (In all cases the information is
           # still available in the step's summary.)
           comment: always
 ```
@@ -125,22 +125,87 @@ jobs:
           merge: true
           # To reduce the workflow's verbosity, use 'on-error'
           # to only post a comment when an error occurs, or 'never' to
-          # never post a comment.  (In all cases the information is
+          # never post a comment. (In all cases the information is
           # still available in the step's summary.)
           comment: always
 ```
 
 This workflow is only run when a comment that includes `/fast-forward`
-is added to the pull request.  The workflow is careful to check that
+is added to the pull request. The workflow is careful to check that
 the user who triggered the workflow is actually authorized to push to
 the repository.
+
+> **Note**
+>
+> The keyword used to trigger the action from a comment on the PR is
+> `/fast-forward` by default, but it can be set to whatever you want in your
+> workflow.
+>
+> To do so, just change the quoted string in the `if` condition of the
+> `fast-forward` job in the workflow file.
+
+## Semi-linear History
+
+To keep a [semi-linear history
+](https://devblogs.microsoft.com/devops/pull-requests-with-rebase/#semi-linear-merge)
+on your repository, i.e. merging a fast-forward branch with a merge
+commit, add `.github/workflows/fast-forward.yml` to your repository
+with the [following contents](.github/workflows/fast-forward.yml):
+
+```yaml
+name: fast-forward
+on:
+  issue_comment:
+    types: [created, edited]
+jobs:
+  fast-forward:
+    # Only run if the comment contains the /fast-forward command.
+    if: ${{ contains(github.event.comment.body, '/fast-forward')
+            && github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Fast forwarding
+        uses: sequoia-pgp/fast-forward@v1
+        with:
+          merge: true
+          merge-method: merge-commit
+          # To reduce the workflow's verbosity, use 'on-error'
+          # to only post a comment when an error occurs, or 'never' to
+          # never post a comment. (In all cases the information is
+          # still available in the step's summary.)
+          comment: always
+```
+
+This workflow is only run when a comment that includes `/fast-forward`
+is added to the pull request. The workflow is careful to :
+* check that the user who triggered the workflow is actually authorized to
+  push to the repository;
+* check that the branch is still fast-forward compared to the target branch
+  right before doing the merge;
+* generate a merge commit log including the PR's details.
+
+### Merge commit log
+
+Though this action aims at replacing the lack of rebase and merge `--no-ff` on
+GitHub, the way the merge commit message will be generated can be selected via
+the `merge-commit-content` workflow setting. The setting offer similar choices
+as the GitHub's web UX for the **Allow merge commits** merge method.
+
+When merging a pull request, the action will generate a merge commit message
+according to the value of this `merge-commit-content` setting.
 
 ## Disabling Comments
 
 If you prefer to disable comments, you can set the `comment` input
-variable to `false`.  The `comment` is also written to the `comment`
-output variable so it is possible to use it in a successive step.  The
-format is a JSON document with a single key, `body`.  Here's an
+variable to `false`. The `comment` is also written to the `comment`
+output variable so it is possible to use it in a successive step. The
+format is a JSON document with a single key, `body`. Here's an
 example:
 
 ```yaml

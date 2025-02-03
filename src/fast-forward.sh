@@ -286,17 +286,84 @@ LOG=$(mktemp)
 
         if test "x$(jq -r .user.permissions.push < $PERM)" = xtrue
         then
-            echo -n "Fast forwarding \`$BASE_REF\` ($BASE_SHA) to"
-            echo " \`$PR_REF\` ($PR_SHA)."
+            if test "x$2" = "xmerge-commit"
+            then
+                # Retrieve the user's details (comment sender username and email)
+                # required for merge-commit metadata.
+                USER_NAME="$(github_event .sender.login)"
+                # Email pattern vampirised from the checkout action
+                # (https://github.com/actions/checkout/blob/main/README.md):
+                #   {user.id}+{user.login}@users.noreply.github.com
+                USER_EMAIL="$(github_event .sender.id)+${USER_NAME}@users.noreply.github.com"
 
-            echo '```shell'
-            (
-                PS4='$ '
-                set -x
-                git push origin "$PR_SHA:$BASE_REF"
-            )
-            echo '```'
-            echo 0 >$EXIT_CODE
+                echo "Merging \`$PR_REF\` ($PR_SHA) into \`$BASE_REF\` ($BASE_SHA)."
+
+                if test "$(git rev-parse HEAD)" != "${BASE_SHA}"
+                then
+                    git checkout "${BASE_REF}"
+                fi
+
+                MESSAGE=$(mktemp)
+                PR_NUMBER="$(github_pull_request .number)"
+                PR_HTML_URL="$(github_pull_request .html_url)"
+                # debug stuff
+                cat $GITHUB_EVENT
+                {
+                    case "${MERGE_COMMIT_CONTENT}"  in
+                        pr-title-and-body)
+                            # Message contains PR's title and PR's description
+                            # (similar to GitHub's option "PR title and description" +
+                            # the PR's references)
+                            echo "Merge #${PR_NUMBER}: $(github_pull_request .title)"
+                            echo ""
+                            echo "* ${PR_HTML_URL}"
+                            echo "* from ${PR_REF} into ${BASE_REF}"
+                            echo ""
+                            github_pull_request .body
+                            ;;
+                        pr-title)
+                            # Message only contains PR's title
+                            # (similar to GitHub's option "PR title" + the PR's references)
+                            echo "$(github_pull_request .title) (#${PR_NUMBER})"
+                            echo ""
+                            echo "* ${PR_HTML_URL}"
+                            echo "* from ${PR_REF} into ${BASE_REF}"
+                            ;;
+                        *)
+                            # Default merge commit message (similar to GitHub's default)
+                            echo "Merge pull request #$(github_pull_request .number) from ${PR_REF}"
+                            echo ""
+                            github_pull_request .title
+                            ;;
+                    esac
+                } > "${MESSAGE}"
+                echo '```shell'
+                (
+                    PS4='$ '
+                    set -x
+                    git \
+                        -c user.name="${USER_NAME}" \
+                        -c user.email="${USER_EMAIL}" \
+                        merge --no-ff --into-name "${BASE_REF}" --file "${MESSAGE}" "${PR_SHA}"
+                    git push origin "${BASE_REF}"
+                )
+                echo '```'
+                rm $MESSAGE
+                echo 0 >$EXIT_CODE
+
+            else
+                echo -n "Fast forwarding \`$BASE_REF\` ($BASE_SHA) to"
+                echo " \`$PR_REF\` ($PR_SHA)."
+
+                echo '```shell'
+                (
+                    PS4='$ '
+                    set -x
+                    git push origin "$PR_SHA:$BASE_REF"
+                )
+                echo '```'
+                echo 0 >$EXIT_CODE
+            fi
         else
             echo -n "Sorry @$(github_event .sender.login),"
             echo -n " it is possible to fast forward \`$BASE_REF\` ($BASE_SHA)"
