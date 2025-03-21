@@ -115,7 +115,7 @@ function github_pull_request {
                 exit 1
             fi
 
-            curl --silent --show-error --location \
+            curl --silent --show-error --location --globoff \
                  -X GET \
                  -H "Accept: application/vnd.github+json" \
                  -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -278,7 +278,7 @@ LOG=$(mktemp)
         COLLABORATORS_URL="${COLLABORATORS_URL%\{/collaborator\}}"
 
         PERM=$(mktemp)
-        curl --silent --show-error -o "$PERM" --location \
+        curl --silent --show-error -o "$PERM" --location --globoff \
              -H "Accept: application/vnd.github+json" \
              -H "Authorization: Bearer $GITHUB_TOKEN" \
              -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -334,7 +334,7 @@ then
     if test "x$COMMENTS_URL" != x
     then
         echo "Posting comment to $COMMENTS_URL."
-        curl --silent --show-error --location \
+        curl --silent --show-error --location --globoff \
              -X POST \
              -H "Accept: application/vnd.github+json" \
              -H "Authorization: Bearer $GITHUB_TOKEN" \
