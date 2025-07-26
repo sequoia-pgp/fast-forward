@@ -12,7 +12,7 @@
 #   - Resource owner: sequoia-pgp
 #   - Only select repositories - sequoia-pgp/fast-forward-unit-tests
 #   - Permissions - select read and write permission for contents, issues,
-#     and pull requests.
+#     pull requests, and workflows.
 #
 # Add the secret to the fast-forward repository by going to:
 #
